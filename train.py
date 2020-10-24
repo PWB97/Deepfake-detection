@@ -60,7 +60,7 @@ def train_on_epochs(train_loader: DataLoader, test_loader: DataLoader, restore_f
 
     # 提取网络参数，准备进行训练
     model_params = model.parameters()
-
+    torch.cuda.is_available()
     # 设定优化器
     # if device_count > 1:
     #     optimizer = torch.optim.Adam([

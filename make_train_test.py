@@ -57,33 +57,34 @@ def generate_fftest(src_dir, output_dir, type):
     trainList = []
     testList = []
 
-    with open('./train.json', 'r') as f:
-        data = json.load(f)
-        for it in data:
-            trainList.append(
-                [src_dir + '/manipulated_sequences/' + type + '/c40/videos/' + it[0] + '_' + it[1] + '.mp4', 0])
-            trainList.append([src_dir + '/original_sequences' + '/youtube/c40/videos/' + it[1] + '.mp4', 1])
-
-    print('total train: %d' % len(trainList))
+    # with open('./train.json', 'r') as f:
+    #     data = json.load(f)
+    #     for it in data:
+    #         trainList.append(
+    #             [src_dir + '/manipulated_sequences/' + type + '/c23/videos/' + it[0] + '_' + it[1] + '.mp4', 0])
+    #         trainList.append([src_dir + '/original_sequences' + '/youtube/c23/videos/' + it[1] + '.mp4', 1])
+    #
+    # print('total train: %d' % len(trainList))
 
     with open('./test.json', 'r') as f:
         data = json.load(f)
         for it in data:
             testList.append(
-                [src_dir + '/manipulated_sequences/' + type + '/c40/videos/' + it[0] + '_' + it[1] + '.mp4', 0])
-            testList.append([src_dir + '/original_sequences' + '/youtube/c40/videos/' + it[1] + '.mp4', 1])
+                [src_dir + '/manipulated_sequences/' + type + '/c23/videos/' + it[0] + '_' + it[1] + '.mp4', 0])
+            testList.append([src_dir + '/original_sequences' + '/youtube/c23/videos/' + it[1] + '.mp4', 1])
 
     print('total test: %d' % len(testList))
 
-    train_set = return_dataset(trainList, src_dir, output_dir)
+    # train_set = return_dataset(trainList, src_dir, output_dir)
     test_set = return_dataset(testList, src_dir, output_dir, type='test')
 
-    datas = [train_set, test_set]
-    names = ['train', 'test']
-    for i in range(2):
-        with open(output_dir + '/' + names[i] + '.csv', 'w') as f:
-            f.write('\n'.join([','.join(line) for line in datas[i]]))
-
+    # datas = [train_set, test_set]
+    # names = ['train', 'test']
+    # for i in range(2):
+    #     with open(output_dir + '/' + names[i] + '.csv', 'w') as f:
+    #         f.write('\n'.join([','.join(line) for line in datas[i]]))
+    with open(output_dir + '/test.csv', 'w') as f:
+        f.write('\n'.join([','.join(line) for line in test_set]))
 
 def generate_data(src_dir, output_dir):
     outputDir(output_dir)
@@ -116,8 +117,8 @@ def generate_data(src_dir, output_dir):
 
     trainList = [i for i in dataList if i not in testList]
 
-    train_set = return_dataset(trainList[:5], src_dir, output_dir)
-    test_set = return_dataset(testList[:2], src_dir, output_dir, type='test')
+    train_set = return_dataset(trainList, src_dir, output_dir)
+    test_set = return_dataset(testList, src_dir, output_dir, type='test')
 
     datas = [train_set, test_set]
     names = ['train', 'test']
@@ -189,9 +190,9 @@ def return_dataset(list, src_dir, output_dir, type='train'):
 
 def parse_args():
     parser = argparse.ArgumentParser(usage='')
-    parser.add_argument('-i', '--src_dir', help='path to datasets', default='/data2/guesthome/wenbop/dfdc')
-    parser.add_argument('-o', '--output_dir', help='path to output', default='/data2/guesthome/wenbop/dfdc_dataset')
-    # parser.add_argument('-t', '--type', default='Deepfakes')
+    parser.add_argument('-i', '--src_dir', help='path to datasets', default='/home/asus/ff')
+    parser.add_argument('-o', '--output_dir', help='path to output', default='/home/asus/ffdf')
+    parser.add_argument('-t', '--type', default='Deepfakes')
     args = parser.parse_args()
     return args
 
@@ -200,5 +201,5 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = '0,1'
     args = parse_args()
     # generate_data(**vars(args))
-    # generate_fftest(**vars(args))
-    generate_dfdc(**vars(args))
+    generate_fftest(**vars(args))
+    # generate_dfdc(**vars(args))

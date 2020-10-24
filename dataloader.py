@@ -12,6 +12,48 @@ import config
 import os
 import random
 
+import numpy as np
+from PIL import Image
+
+
+class AddSaltPepperNoise(object):
+
+    def __init__(self, density=0.0):
+        self.density = density
+
+    def __call__(self, img):
+        img = np.array(img)  # 图片转numpy
+        img = np.transpose(img, (1, 2, 0))
+        h, w, c = img.shape
+        Nd = self.density
+        Sd = 1 - Nd
+        mask = np.random.choice((0, 1, 2), size=(h, w, 1), p=[Nd / 2.0, Nd / 2.0, Sd])  # 生成一个通道的mask
+        mask = np.repeat(mask, c, axis=2)  # 在通道的维度复制，生成彩色的mask
+        img[mask == 0] = 0  # 椒
+        img[mask == 1] = 255  # 盐
+        img = np.transpose(img, (2, 0, 1))
+        img = Image.fromarray(np.uint8(img)).convert('RGB')  # numpy转图片
+        return img
+
+
+class AddGaussianNoise(object):
+
+    def __init__(self, mean=0.0, variance=1.0, amplitude=1.0):
+        self.mean = mean
+        self.variance = variance
+        self.amplitude = amplitude
+
+    def __call__(self, img):
+        img = np.array(img)
+        img = np.transpose(img, (1, 2, 0))
+        h, w, c = img.shape
+        N = self.amplitude * np.random.normal(loc=self.mean, scale=self.variance, size=(h, w, 1))
+        N = np.repeat(N, c, axis=2)
+        img = N + img
+        img[img > 255] = 255  # 避免有值超过255而反转
+        img = Image.fromarray(np.uint8(img)).convert('RGB')
+        return img
+
 
 class FrameDataset(data.Dataset):
     def __init__(self, data_list=[], skip_frame=1, frame_num=300):
@@ -238,6 +280,7 @@ class Dataset(data.Dataset):
     def transform(self, img):
         return transforms.Compose([
             transforms.Resize((config.img_w, config.img_h)),
+            AddSaltPepperNoise(),
             transforms.ToTensor(),
             transforms.Normalize(
                 mean=[0.485, 0.456, 0.406],
