@@ -46,7 +46,7 @@ def validation(model: nn.Sequential, test_loader: torch.utils.data.DataLoader, e
                 # print('输出了！')
                 X, y = X.to(device), y.to(device)
                 frame_y = y.view(-1, 1)
-                frame_y = frame_y.repeat(1, 300)
+                frame_y = frame_y.repeat(1, 30)
                 frame_y = frame_y.flatten()
                 y_, cnn_y = model(X)
                 y_ = torch.sigmoid(y_)
@@ -162,9 +162,9 @@ def validation(model: nn.Sequential, test_loader: torch.utils.data.DataLoader, e
 def parse_args():
     parser = argparse.ArgumentParser(usage='python3 train.py -i path/to/data -r path/to/checkpoint')
     parser.add_argument('-i', '--data_path', help='path to your datasets',
-                        default='/data2/guesthome/wenbop/dataset_dlib')
+                        default='/home/asus/ffdf/')
     # parser.add_argument('-i', '--data_path', help='path to your datasets', default='/Users/pu/Desktop/dataset_dlib')
-    parser.add_argument('-r', '--restore_from', help='path to the checkpoint', default='/data2/guesthome/wenbop/modules/auc/bi-model_type-baseline_gru_auc_0.150000_ep-15.pth')
+    parser.add_argument('-r', '--restore_from', help='path to the checkpoint', default='/home/asus/pvc/checkpoints/bi-model_type-baseline_gru_ep-12.pth')
     parser.add_argument('-g', '--gpu', help='visible gpu ids', default='0,1,2,3')
     args = parser.parse_args()
     return args
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     data_path = args.data_path
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
     raw_data = pandas.read_csv(os.path.join(data_path, '%s.csv' % 'test'))
-    dataloader = DataLoader(Dataset(raw_data.to_numpy()), **config.dataset_params)
+    dataloader = DataLoader(Dataset(raw_data.to_numpy(), frame_num=30), **config.dataset_params)
     use_cuda = torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
     # model = SPPNet(backbone=50)

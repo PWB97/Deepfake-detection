@@ -60,7 +60,6 @@ def train_on_epochs(train_loader: DataLoader, test_loader: DataLoader, restore_f
 
     # 提取网络参数，准备进行训练
     model_params = model.parameters()
-    torch.cuda.is_available()
     # 设定优化器
     # if device_count > 1:
     #     optimizer = torch.optim.Adam([
@@ -195,10 +194,11 @@ def train(model: nn.Sequential, dataloader: torch.utils.data.DataLoader, optimiz
             frame_y = y.view(-1, 1)
             frame_y = frame_y.repeat(1, size)
             frame_y = frame_y.flatten()
+            print(X.shape)
             y_, cnn_y = model(X)
             if loss_type == 'CE':
-                video_loss_ce = F.cross_entropy(y_, y)
-                frame_loss_ce = F.cross_entropy(cnn_y, frame_y)
+                video_loss_ce = F.binary_cross_entropy_with_logits(y_, y.reshape(-1, 1).float())
+                frame_loss_ce = F.binary_cross_entropy_with_logits(cnn_y, frame_y.reshape(-1, 1).float())
                 loss = video_loss_ce + frame_loss_ce
             elif loss_type == 'AUC':
                 video_loss_ce = F.binary_cross_entropy_with_logits(y_, y.reshape(-1, 1).float())
@@ -349,7 +349,7 @@ def validation(model: nn.Sequential, test_loader: torch.utils.data.DataLoader, e
 def parse_args():
     parser = argparse.ArgumentParser(usage='python3 train.py -i path/to/data -r path/to/checkpoint')
     parser.add_argument('-i', '--data_path', help='path to your datasets',
-                        default='/data2/guesthome/wenbop/dataset_dlib')
+                        default='/home/asus/celeb_dataset')
     # parser.add_argument('-i', '--data_path', help='path to your datasets', default='/Users/pu/Desktop/dataset_dlib')
     parser.add_argument('-r', '--restore_from', help='path to the checkpoint', default=None)
     parser.add_argument('-g', '--gpu', help='visible gpu ids', default='0,1,2,3')

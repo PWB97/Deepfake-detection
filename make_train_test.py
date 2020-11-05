@@ -2,10 +2,9 @@ import os
 import cv2
 from tqdm import tqdm
 import argparse
-import torch
-from PIL import Image
 import dlib
 import json
+import random
 
 import tools
 
@@ -41,15 +40,16 @@ def generate_dfdc(src_dir, output_dir):
                         trainList.append([src_dir + '/' + dir + '/' + name, 1])
 
     train_set = return_dataset(trainList, src_dir, output_dir)
-    # test_set = return_dataset(testList, src_dir, output_dir, type='test')
+    test_set = return_dataset(testList, src_dir, output_dir, type='test')
 
-    # datas = [train_set, test_set]
-    # names = ['train', 'test']
-    # for i in range(2):
-    #     with open(output_dir + '/' + names[i] + '.csv', 'w') as f:
-    #         f.write('\n'.join([','.join(line) for line in datas[i]]))
-    with open(output_dir + '/train.csv', 'w') as f:
-        f.write('\n'.join([','.join(line) for line in train_set]))
+    datas = [train_set, test_set]
+    names = ['train', 'test']
+    for i in range(2):
+        with open(output_dir + '/' + names[i] + '.csv', 'w') as f:
+            f.write('\n'.join([','.join(line) for line in datas[i]]))
+    # with open(output_dir + '/train.csv', 'w') as f:
+    #     f.write('\n'.join([','.join(line) for line in train_set]))
+
 
 def generate_fftest(src_dir, output_dir, type):
     outputDir(output_dir)
@@ -57,14 +57,22 @@ def generate_fftest(src_dir, output_dir, type):
     trainList = []
     testList = []
 
-    # with open('./train.json', 'r') as f:
-    #     data = json.load(f)
-    #     for it in data:
-    #         trainList.append(
-    #             [src_dir + '/manipulated_sequences/' + type + '/c23/videos/' + it[0] + '_' + it[1] + '.mp4', 0])
-    #         trainList.append([src_dir + '/original_sequences' + '/youtube/c23/videos/' + it[1] + '.mp4', 1])
-    #
-    # print('total train: %d' % len(trainList))
+    fake = []
+    real = []
+
+    with open('./train.json', 'r') as f:
+        data = json.load(f)
+        for it in data:
+            trainList.append(
+                [src_dir + '/manipulated_sequences/' + type + '/c23/videos/' + it[0] + '_' + it[1] + '.mp4', 0])
+            fake.append([src_dir + '/manipulated_sequences/' + type + '/c23/videos/' + it[0] + '_' + it[1] + '.mp4', 0])
+            trainList.append([src_dir + '/original_sequences' + '/youtube/c23/videos/' + it[1] + '.mp4', 1])
+            real.append([src_dir + '/original_sequences' + '/youtube/c23/videos/' + it[1] + '.mp4', 1])
+
+    print('total train: %d' % len(trainList))
+    print('fake len:', len(fake))
+    print('real len:', len(real))
+    del fake, real
 
     with open('./test.json', 'r') as f:
         data = json.load(f)
@@ -75,18 +83,19 @@ def generate_fftest(src_dir, output_dir, type):
 
     print('total test: %d' % len(testList))
 
-    # train_set = return_dataset(trainList, src_dir, output_dir)
+    train_set = return_dataset(trainList, src_dir, output_dir)
     test_set = return_dataset(testList, src_dir, output_dir, type='test')
 
-    # datas = [train_set, test_set]
-    # names = ['train', 'test']
-    # for i in range(2):
-    #     with open(output_dir + '/' + names[i] + '.csv', 'w') as f:
-    #         f.write('\n'.join([','.join(line) for line in datas[i]]))
-    with open(output_dir + '/test.csv', 'w') as f:
-        f.write('\n'.join([','.join(line) for line in test_set]))
+    datas = [train_set, test_set]
+    names = ['train', 'test']
+    for i in range(2):
+        with open(output_dir + '/' + names[i] + '.csv', 'w') as f:
+            f.write('\n'.join([','.join(line) for line in datas[i]]))
+    # with open(output_dir + '/test.csv', 'w') as f:
+    #     f.write('\n'.join([','.join(line) for line in test_set]))
 
-def generate_data(src_dir, output_dir):
+
+def generate_data(src_dir, output_dir, split=10):
     outputDir(output_dir)
 
     # 划分测试集和训练集
@@ -96,12 +105,13 @@ def generate_data(src_dir, output_dir):
     Celeb_real = tools.list_file(src_dir + '/Celeb-real', 1)
     Celeb_synthesis = tools.list_file(src_dir + '/Celeb-synthesis', 0)
     YouTube_real = tools.list_file(src_dir + '/YouTube-real', 1)
+    total_real = Celeb_real + YouTube_real
 
-    dataList += Celeb_real
-    dataList += YouTube_real
-    print('total real:%d' % len(dataList))
-    dataList += Celeb_synthesis
-    print('total: %d' % len(dataList))
+    print('real:%d' % len(total_real))
+    print('fake: %d' % len(Celeb_synthesis))
+
+    dataList = total_real + Celeb_synthesis
+
     j = i = 0
     with open(src_dir + '/List_of_testing_videos.txt') as testFile:
         for line in testFile:
@@ -117,6 +127,10 @@ def generate_data(src_dir, output_dir):
 
     trainList = [i for i in dataList if i not in testList]
 
+    if split != 0:
+        trainList = return_split(trainList, split)
+        testList = return_split(testList, split)
+
     train_set = return_dataset(trainList, src_dir, output_dir)
     test_set = return_dataset(testList, src_dir, output_dir, type='test')
 
@@ -125,6 +139,26 @@ def generate_data(src_dir, output_dir):
     for i in range(2):
         with open(output_dir + '/' + names[i] + '.csv', 'w') as f:
             f.write('\n'.join([','.join(line) for line in datas[i]]))
+
+
+def return_split(data_set: [], split=10):
+    print('splitting!')
+    fake = []
+    real = []
+
+    for it in data_set:
+        if it[1] == 0:
+            fake.append(it)
+        else:
+            real.append(it)
+
+    fake_len = len(real) // split
+    random.shuffle(fake)
+    fake = fake[0:fake_len]
+
+    print('split fake:', len(fake))
+    print('split real:', len(real))
+    return fake + real
 
 
 def get_boundingbox(face, width, height, scale=1.3, minsize=None):
@@ -190,16 +224,18 @@ def return_dataset(list, src_dir, output_dir, type='train'):
 
 def parse_args():
     parser = argparse.ArgumentParser(usage='')
-    parser.add_argument('-i', '--src_dir', help='path to datasets', default='/home/asus/ff')
-    parser.add_argument('-o', '--output_dir', help='path to output', default='/home/asus/ffdf')
+    parser.add_argument('-i', '--src_dir', help='path to datasets', default='/home/asus/Celeb-DF-v2/')
+    parser.add_argument('-o', '--output_dir', help='path to output', default='/home/asus/celeb_')
     parser.add_argument('-t', '--type', default='Deepfakes')
+    parser.add_argument('-g', '--gpu', default='0')
+    parser.add_argument('-s', '--split', type=int, default=10)
     args = parser.parse_args()
     return args
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = '0,1'
     args = parse_args()
-    # generate_data(**vars(args))
-    generate_fftest(**vars(args))
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+    generate_data(args.src_dir, args.output_dir + str(args.split), args.split)
+    # generate_fftest(args.src_dir, args.output_dir, args.type)
     # generate_dfdc(**vars(args))

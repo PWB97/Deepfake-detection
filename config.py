@@ -1,8 +1,8 @@
-img_w = 64
+img_w = 128
 img_h = img_w
 
 dataset_params = {
-    'batch_size': 1,
+    'batch_size': 16,
     'shuffle': True,
     'num_workers': 1,
     'pin_memory': False,
