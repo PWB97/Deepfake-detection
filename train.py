@@ -1,22 +1,14 @@
-import torch
-from torch import nn
-from torch.nn import functional as F
 from torch.utils.data import DataLoader
 
-from sklearn.metrics import accuracy_score, roc_auc_score
-from tqdm import tqdm
-import pandas
-import json
-import os
-import argparse
+from sklearn.metrics import accuracy_score, recall_score, f1_score, precision_score
 from tensorboardX import SummaryWriter
 
-from model import cRNN, get_resnet_3d, CNN, Baseline
-from models import model_selection
-from classifier import SPPNet, ResNet
-from dataloader import Dataset, FrameDataset
-import config
-import tools
+from models.model import cRNN, get_resnet_3d, CNN
+from utils import tools
+from fwa.classifier import SPPNet, ResNet
+from utils.dataloader import Dataset, FrameDataset
+from utils.tools import *
+from utils.focalloss import *
 
 
 def train_on_epochs(train_loader: DataLoader, test_loader: DataLoader, restore_from: str = None, size=300):
@@ -54,32 +46,20 @@ def train_on_epochs(train_loader: DataLoader, test_loader: DataLoader, restore_f
     ckpt = {}
     # 从断点继续训练
     if restore_from is not None:
-        ckpt = torch.load(restore_from, map_location='cpu')
-        model.load_state_dict(ckpt['model_state_dict'])
+        if config.model_type == 'fwa':
+            ckpt = torch.load(restore_from)
+            model.load_state_dict(ckpt['net'])
+        else:
+            ckpt = torch.load(restore_from, map_location='cpu')
+            model.load_state_dict(ckpt['model_state_dict'])
         print('Model is loaded from %s' % restore_from)
 
     # 提取网络参数，准备进行训练
     model_params = model.parameters()
-    # 设定优化器
-    # if device_count > 1:
-    #     optimizer = torch.optim.Adam([
-    #         dict(params=model.module.rnn.parameters()),
-    #         dict(params=model.module.fc_cnn.parameters()),
-    #         dict(params=model.module.global_pool.parameters()),
-    #         dict(params=model.module.fc_rnn.parameters()),
-    #         dict(params=model.module.cnn.parameters(), lr=config.learning_rate / 10)
-    #     ], lr=config.learning_rate, weight_decay=0.0001)
-    # else:
-    #     optimizer = torch.optim.Adam([
-    #         dict(params=model.rnn.parameters()),
-    #         dict(params=model.fc_cnn.parameters()),
-    #         dict(params=model.global_pool.parameters()),
-    #         dict(params=model.fc_rnn.parameters()),
-    #         dict(params=model.cnn.parameters(), lr=config.learning_rate / 10)
-    #     ], lr=config.learning_rate, weight_decay=0.0001)
     optimizer = torch.optim.Adam(model_params, lr=config.learning_rate)
+    # optimizer = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.98)
 
-    if restore_from is not None:
+    if restore_from is not None and config.model_type != 'fwa':
         optimizer.load_state_dict(ckpt['optimizer_state_dict'])
 
     # 训练时数据
@@ -91,9 +71,10 @@ def train_on_epochs(train_loader: DataLoader, test_loader: DataLoader, restore_f
         'test_auc': []
     }
 
-    start_ep = ckpt['epoch'] + 1 if 'epoch' in ckpt else 0
+    start_ep = ckpt['epoch'] + 1 if 'epoch' in ckpt and config.model_type != 'fwa' else 0
 
-    save_path = './checkpoints'
+    save_path = './checkpoints/' + config.model_type + str(config.net_params.get('use_gru')) + \
+                str(config.net_params.get('bi_branch'))
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
@@ -106,12 +87,14 @@ def train_on_epochs(train_loader: DataLoader, test_loader: DataLoader, restore_f
         writer = SummaryWriter(logdir='./log_model_type_%s' % config.model_type)
     elif not config.net_params.get('use_gru') and config.loss_type == 'AUC':
         writer = SummaryWriter(logdir='./log_model_type_%s_auc_%d' % (config.model_type, config.gamma))
+    elif config.net_params.get('use_gru') and config.loss_type == 'focal':
+        writer = SummaryWriter(logdir='./log_model_type_%s_focal_%d' % (config.model_type, config.gamma))
 
     for ep in range(start_ep, config.epoches):
         train_losses, train_scores = train(model, train_loader, optimizer, ep, config.model_type, config.loss_type,
-                                           writer, device, size=size)
+                                           writer, device, size=size, o_s=config.net_params.get('num_classes'))
         test_loss, test_score, test_auc = validation(model, test_loader, ep, config.model_type, config.loss_type,
-                                                     writer, device, size=size)
+                                                     writer, device, size=size, o_s=config.net_params.get('num_classes'))
 
         # 保存信息
         info['train_losses'].append(train_losses)
@@ -132,6 +115,9 @@ def train_on_epochs(train_loader: DataLoader, test_loader: DataLoader, restore_f
             elif not config.net_params.get('use_gru') and config.loss_type == 'AUC':
                 ckpt_path = os.path.join(save_path,
                                          'bi-model_type-%s_auc_%f_ep-%d.pth' % (config.model_type, config.gamma, ep))
+            elif config.net_params.get('use_gru') and config.loss_type == 'focal':
+                ckpt_path = os.path.join(save_path, 'bi-model_type-%s_gru_focal_%f_ep-%d.pth'
+                                         % (config.model_type, config.gamma, ep))
         else:
             if config.net_params.get('use_gru') and config.loss_type == 'CE':
                 ckpt_path = os.path.join(save_path, 'nb-model_type-%s_gru_ep-%d.pth' % (config.model_type, ep))
@@ -173,7 +159,7 @@ def load_data_list(file_path):
 
 
 def train(model: nn.Sequential, dataloader: torch.utils.data.DataLoader, optimizer: torch.optim.Optimizer, epoch,
-          model_type, loss_type, writer, device, size=300):
+          model_type, loss_type, writer, device, size=300, o_s=2):
     model.train()
 
     train_losses = []
@@ -194,11 +180,15 @@ def train(model: nn.Sequential, dataloader: torch.utils.data.DataLoader, optimiz
             frame_y = y.view(-1, 1)
             frame_y = frame_y.repeat(1, size)
             frame_y = frame_y.flatten()
-            print(X.shape)
-            y_, cnn_y = model(X)
+            if config.net_params.get('inputgate'):
+                y_, cnn_y, gas = model(X)
+            else:
+                y_, cnn_y = model(X)
             if loss_type == 'CE':
-                video_loss_ce = F.binary_cross_entropy_with_logits(y_, y.reshape(-1, 1).float())
-                frame_loss_ce = F.binary_cross_entropy_with_logits(cnn_y, frame_y.reshape(-1, 1).float())
+                # video_loss_ce = F.binary_cross_entropy_with_logits(y_, y.reshape(-1, 1).float())
+                # frame_loss_ce = F.binary_cross_entropy_with_logits(cnn_y, frame_y.reshape(-1, 1).float())
+                video_loss_ce = F.cross_entropy(y_, y)
+                frame_loss_ce = F.cross_entropy(cnn_y, frame_y)
                 loss = video_loss_ce + frame_loss_ce
             elif loss_type == 'AUC':
                 video_loss_ce = F.binary_cross_entropy_with_logits(y_, y.reshape(-1, 1).float())
@@ -209,7 +199,21 @@ def train(model: nn.Sequential, dataloader: torch.utils.data.DataLoader, optimiz
                     loss = frame_loss_ce + video_loss_ce
                 else:
                     loss = 0.6 * (frame_loss_ce + video_loss_ce) + 0.4 * (video_loss_auc + frame_loss_auc)
+                    # loss = frame_loss_ce + video_loss_ce + video_loss_auc + frame_loss_auc
                 # loss = video_loss_auc + frame_loss_auc
+            elif loss_type == 'focal':
+                focal = BCEFocalLoss(config.gamma)
+                video_loss_f = focal(y_, y.reshape(-1, 1).float())
+                frame_loss_f = focal(cnn_y, frame_y.reshape(-1, 1).float())
+                loss = video_loss_f + frame_loss_f
+
+            if config.net_params.get('inputgate'):
+                acts = torch.tensor(0., device=device)
+                for ga in gas:
+                    acts += torch.mean(ga)
+                acts = torch.mean(acts / len(gas))
+                loss += acts * 0.5
+
         elif config.model_type == 'xception' or config.model_type == 'fwa' or config.model_type == 'res50' or config.model_type == 'res101' or config.model_type == 'res152':
             y_ = model(X)
             loss = F.cross_entropy(y_, y)
@@ -222,15 +226,17 @@ def train(model: nn.Sequential, dataloader: torch.utils.data.DataLoader, optimiz
             else:
                 loss = tools.AUC_loss(y_, y, device, config.gamma) + F.cross_entropy(y_, y)
         # 计算loss
-
         # 反向传播梯度
         loss.backward()
         optimizer.step()
 
-        # y_ = y_.argmax(dim=1)
-        y_ = torch.sigmoid(y_)
-        y_ = [0 if i < 0.5 else 1 for i in y_]
-        acc = accuracy_score(y.cpu().numpy(), y_)
+        if o_s == 2:
+            y_ = y_.argmax(dim=1)
+            acc = accuracy_score(y_.cpu().numpy(), y.cpu().numpy())
+        else:
+            y_ = torch.sigmoid(y_)
+            y_ = [0 if i < 0.5 else 1 for i in y_]
+            acc = accuracy_score(y.cpu().numpy(), y_)
 
         # 保存loss等信息
         train_losses.append(loss.item())
@@ -247,7 +253,7 @@ def train(model: nn.Sequential, dataloader: torch.utils.data.DataLoader, optimiz
 
 
 def validation(model: nn.Sequential, test_loader: torch.utils.data.DataLoader, epoch, model_type, loss_type, writer,
-               device, size=300):
+               device, size=300, o_s=2):
     model.eval()
 
     print('Size of Test Set: ', len(test_loader.dataset))
@@ -263,18 +269,19 @@ def validation(model: nn.Sequential, test_loader: torch.utils.data.DataLoader, e
     with torch.no_grad():
         if config.net_params.get('bi_branch'):
             for X, y in tqdm(test_loader, desc='Validating plus frame level'):
-                if model_type == 'end2end':
-                    X = X.transpose(1, 2)
+                # if model_type == 'end2end':
+                #     X = X.transpose(1, 2)
                 X, y = X.to(device), y.to(device)
                 frame_y = y.view(-1, 1)
                 frame_y = frame_y.repeat(1, size)
                 frame_y = frame_y.flatten()
-                y_, cnn_y = model(X)
+                if config.net_params.get('inputgate'):
+                    y_, cnn_y, _ = model(X)
+                else:
+                    y_, cnn_y = model(X)
+
                 y_ = torch.sigmoid(y_)
                 cnn_y = torch.sigmoid(cnn_y)
-
-                # y_ = y_.argmax(dim=1)
-                # frame_y_ = cnn_y.argmax(dim=1)
                 frame_y_ = cnn_y
 
                 y_gd += y.cpu().numpy().tolist()
@@ -290,8 +297,15 @@ def validation(model: nn.Sequential, test_loader: torch.utils.data.DataLoader, e
             frame_y_pred = [0 if i < 0.5 else 1 for i in frame_y_pred]
             test_video_acc = accuracy_score(y_gd, y_pred)
             test_video_auc = roc_auc_score(y_gd, y_pred_pro)
+            test_video_recall = recall_score(y_gd, y_pred)
+            test_video_f1 = f1_score(y_gd, y_pred)
+            test_video_precision = precision_score(y_gd, y_pred)
             test_frame_acc = accuracy_score(frame_y_gd, frame_y_pred)
             test_frame_auc = roc_auc_score(frame_y_gd, frame_y_pred_pro)
+            test_frame_recall = recall_score(frame_y_gd, frame_y_pred)
+            test_frame_f1 = f1_score(frame_y_gd, frame_y_pred)
+            test_frame_precision = precision_score(frame_y_gd, frame_y_pred)
+
         elif config.model_type == 'xception' or config.model_type == 'fwa' or config.model_type == 'res50' or config.model_type == 'res101' or config.model_type == 'res152':
             for X, y in tqdm(test_loader, desc='Validating plus frame level'):
                 X, y = X.to(device), y.to(device)
@@ -301,6 +315,10 @@ def validation(model: nn.Sequential, test_loader: torch.utils.data.DataLoader, e
                 frame_y_pred += frame_y_.cpu().numpy().tolist()
             test_frame_acc = accuracy_score(frame_y_gd, frame_y_pred)
             test_frame_auc = roc_auc_score(frame_y_gd, frame_y_pred)
+            test_frame_recall = recall_score(frame_y_gd, frame_y_pred)
+            test_frame_f1 = f1_score(frame_y_gd, frame_y_pred)
+            test_frame_precision = precision_score(frame_y_gd, frame_y_pred)
+
         else:
             for X, y in tqdm(test_loader, desc='Validating'):
                 if model_type == 4:
@@ -318,17 +336,28 @@ def validation(model: nn.Sequential, test_loader: torch.utils.data.DataLoader, e
             # 计算正确率
             test_video_acc = accuracy_score(y_gd, y_pred)
             test_video_auc = roc_auc_score(y_gd, y_pred)
+            test_video_recall = recall_score(y_gd, y_pred)
+            test_video_f1 = f1_score(y_gd, y_pred)
+            test_video_precision = precision_score(y_gd, y_pred)
+            print('[Epoch %3d]Test video acc: %0.2f, auc: %0.2f, f1:%0.2f, pre:%0.2f, recall:%0.2f\n' % (
+                epoch, test_video_acc, test_video_auc, test_video_f1, test_video_precision, test_video_recall))
 
     # writer.add_scalar(tag='test_loss', scalar_value=test_loss, global_step=epoch)
     if not config.model_type == 'xception' and not config.model_type == 'fwa' and not config.model_type == 'res50' and \
             not config.model_type == 'res101' and not config.model_type == 'res152':
         writer.add_scalar(tag='test_video_acc', scalar_value=test_video_acc, global_step=epoch)
         writer.add_scalar(tag='test_video_auc', scalar_value=test_video_auc, global_step=epoch)
+        writer.add_scalar(tag='test_video_recall', scalar_value=test_video_recall, global_step=epoch)
+        writer.add_scalar(tag='test_video_f1', scalar_value=test_video_f1, global_step=epoch)
+        writer.add_scalar(tag='test_video_precision', scalar_value=test_video_precision, global_step=epoch)
     if config.net_params.get(
             'bi_branch') or config.model_type == 'xception' or config.model_type == 'fwa' \
             or config.model_type == 'res50' or config.model_type == 'res101' or config.model_type == 'res152':
         writer.add_scalar(tag='test_frame_acc', scalar_value=test_frame_acc, global_step=epoch)
         writer.add_scalar(tag='test_frame_auc', scalar_value=test_frame_auc, global_step=epoch)
+        writer.add_scalar(tag='test_frame_recall', scalar_value=test_frame_recall, global_step=epoch)
+        writer.add_scalar(tag='test_frame_f1', scalar_value=test_frame_f1, global_step=epoch)
+        writer.add_scalar(tag='test_frame_precision', scalar_value=test_frame_precision, global_step=epoch)
     if not config.model_type == 'xception' and not config.model_type == 'fwa' and not config.model_type == 'res50' \
             and not config.model_type == 'res101' and not config.model_type == 'res152':
         print('[Epoch %3d]Test video avg loss: %0.4f, acc: %0.2f, auc: %0.2f\n' % (
@@ -348,11 +377,11 @@ def validation(model: nn.Sequential, test_loader: torch.utils.data.DataLoader, e
 
 def parse_args():
     parser = argparse.ArgumentParser(usage='python3 train.py -i path/to/data -r path/to/checkpoint')
-    parser.add_argument('-i', '--data_path', help='path to your datasets',
-                        default='/home/asus/celeb_dataset')
-    # parser.add_argument('-i', '--data_path', help='path to your datasets', default='/Users/pu/Desktop/dataset_dlib')
+    # parser.add_argument('-i', '--data_path', help='path to your datasets',
+    #                     default='/home/asus/celeb_20')
+    parser.add_argument('-i', '--data_path', help='path to your datasets', default='/Users/pu/Desktop/dataset_dlib')
     parser.add_argument('-r', '--restore_from', help='path to the checkpoint', default=None)
-    parser.add_argument('-g', '--gpu', help='visible gpu ids', default='0,1,2,3')
+    parser.add_argument('-g', '--gpu', help='visible gpu ids', default='0')
     parser.add_argument('-s', '--size', help='size of video frames', default=300)
     args = parser.parse_args()
     return args
@@ -373,10 +402,10 @@ if __name__ == "__main__":
         else:
             if name == 'test':
                 dataloaders[name] = DataLoader(Dataset(data_list=raw_data.to_numpy(), aug=False, add_channel=False,
-                                                       frame_num=args.size),
+                                                       frame_num=args.size, dct=config.net_params.get('dct')),
                                                **config.dataset_params)
             else:
                 dataloaders[name] = DataLoader(Dataset(data_list=raw_data.to_numpy(), aug=False, add_channel=False,
-                                                       frame_num=args.size),
+                                                       frame_num=args.size, dct=config.net_params.get('dct')),
                                                **config.dataset_params)
     train_on_epochs(dataloaders['train'], dataloaders['test'], args.restore_from, size=args.size)

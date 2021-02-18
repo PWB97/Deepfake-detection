@@ -1,17 +1,19 @@
-img_w = 128
+img_w = 64
 img_h = img_w
 
 dataset_params = {
-    'batch_size': 16,
+    'batch_size': 2,
     'shuffle': True,
-    'num_workers': 1,
-    'pin_memory': False,
+    'num_workers': 4,
+    'pin_memory': False
 }
 
 net_params = {
     'use_gru': True,
     'bi_branch': True,
-    'num_classes': 1
+    'num_classes': 1,
+    'dct': False,
+    'inputgate': False
 }
 
 resnet_3d_params = {
@@ -36,15 +38,16 @@ models = {
 
 losses = {
     0: 'CE',
-    1: 'AUC'
+    1: 'AUC',
+    2: 'focal'
 }
 
 
-gamma = 0.3
+gamma = 0.15
 
 model_type = models.get(1)
 loss_type = losses.get(1)
-learning_rate = 1e-5
+learning_rate = 1e-4
 epoches = 20
 log_interval = 2 # 打印间隔，默认每2个batch_size打印一次
 save_interval = 1 # 模型保存间隔，默认每个epoch保存一次

@@ -5,9 +5,11 @@ import argparse
 import dlib
 import json
 import random
+from facenet_pytorch.models.mtcnn import MTCNN
+from utils import tools
 
-import tools
 
+default_types = ['Deepfakes', 'Face2Face', 'FaceSwap', 'NeuralTextures']
 
 def outputDir(output_dir):
     if not os.path.exists(output_dir):
@@ -40,59 +42,93 @@ def generate_dfdc(src_dir, output_dir):
                         trainList.append([src_dir + '/' + dir + '/' + name, 1])
 
     train_set = return_dataset(trainList, src_dir, output_dir)
+    with open(output_dir + '/train.csv', 'w') as f:
+        f.write('\n'.join([','.join(line) for line in train_set]))
+
     test_set = return_dataset(testList, src_dir, output_dir, type='test')
+    with open(output_dir + '/test.csv', 'w') as f:
+        f.write('\n'.join([','.join(line) for line in test_set]))
+    # datas = [train_set, test_set]
+    # names = ['train', 'test']
+    # for i in range(2):
+    #     with open(output_dir + '/' + names[i] + '.csv', 'w') as f:
+    #         f.write('\n'.join([','.join(line) for line in datas[i]]))
 
-    datas = [train_set, test_set]
-    names = ['train', 'test']
-    for i in range(2):
-        with open(output_dir + '/' + names[i] + '.csv', 'w') as f:
-            f.write('\n'.join([','.join(line) for line in datas[i]]))
-    # with open(output_dir + '/train.csv', 'w') as f:
-    #     f.write('\n'.join([','.join(line) for line in train_set]))
 
+def open_json_read(json_name, src_dir, type, c, control=0):
 
-def generate_fftest(src_dir, output_dir, type):
-    outputDir(output_dir)
-
-    trainList = []
-    testList = []
+    List = []
 
     fake = []
     real = []
 
-    with open('./train.json', 'r') as f:
+    with open(json_name, 'r') as f:
         data = json.load(f)
         for it in data:
-            trainList.append(
-                [src_dir + '/manipulated_sequences/' + type + '/c23/videos/' + it[0] + '_' + it[1] + '.mp4', 0])
-            fake.append([src_dir + '/manipulated_sequences/' + type + '/c23/videos/' + it[0] + '_' + it[1] + '.mp4', 0])
-            trainList.append([src_dir + '/original_sequences' + '/youtube/c23/videos/' + it[1] + '.mp4', 1])
-            real.append([src_dir + '/original_sequences' + '/youtube/c23/videos/' + it[1] + '.mp4', 1])
+            if control == 1:
+                List.append(
+                    [src_dir + '/manipulated_sequences/' + type + '/' + c + '/videos/' + it[0] + '_' + it[1] + '.mp4',
+                     0])
+                fake.append([src_dir + '/manipulated_sequences/' + type + '/' + c + '/videos/' + it[0] + '_' + it[1] +
+                             '.mp4', 0])
+            else:
+                List.append(
+                    [src_dir + '/manipulated_sequences/' + type + '/' + c + '/videos/' + it[0] + '_' + it[1] + '.mp4', 0])
+                fake.append([src_dir + '/manipulated_sequences/' + type + '/' + c + '/videos/' + it[0] + '_' + it[1] +
+                             '.mp4', 0])
+                List.append([src_dir + '/original_sequences' + '/youtube/' + c + '/videos/' + it[1] + '.mp4', 1])
+                real.append([src_dir + '/original_sequences' + '/youtube/' + c + '/videos/' + it[1] + '.mp4', 1])
 
-    print('total train: %d' % len(trainList))
-    print('fake len:', len(fake))
+    print('total' + json_name + ': %d' % len(List))
+    if control == 0:
+        print('fake len:', len(fake))
     print('real len:', len(real))
-    del fake, real
 
-    with open('./test.json', 'r') as f:
-        data = json.load(f)
-        for it in data:
-            testList.append(
-                [src_dir + '/manipulated_sequences/' + type + '/c23/videos/' + it[0] + '_' + it[1] + '.mp4', 0])
-            testList.append([src_dir + '/original_sequences' + '/youtube/c23/videos/' + it[1] + '.mp4', 1])
+    return List
 
-    print('total test: %d' % len(testList))
+
+def return_ff_dataset(src_dir, type, c, control):
+
+    trainList = open_json_read('./train.json', src_dir, type, c, control)
+    testList = open_json_read('./test.json', src_dir, type, c, control)
+    valList = open_json_read('./val.json', src_dir, type, c, control)
+
+    return trainList, testList, valList
+
+
+def generate_fftest(src_dir, output_dir, type='all', c='c23'):
+    outputDir(output_dir)
+
+    trainList = []
+    testList = []
+    valList = []
+
+    control = 1
+
+    if type == 'all':
+        for type in default_types:
+            if type == 'NeuralTextures':
+                control = 0
+            trainL, testL, valL = return_ff_dataset(src_dir, type, c, control)
+            trainList += trainL
+            testList += testL
+            valList += valL
+    else:
+        trainList, testList, valList = return_ff_dataset(src_dir, type, c, 0)
+
+    random.shuffle(trainList)
+    random.shuffle(testList)
+    random.shuffle(valList)
 
     train_set = return_dataset(trainList, src_dir, output_dir)
+    with open(output_dir + '/train.csv', 'w') as f:
+        f.write('\n'.join([','.join(line) for line in train_set]))
     test_set = return_dataset(testList, src_dir, output_dir, type='test')
-
-    datas = [train_set, test_set]
-    names = ['train', 'test']
-    for i in range(2):
-        with open(output_dir + '/' + names[i] + '.csv', 'w') as f:
-            f.write('\n'.join([','.join(line) for line in datas[i]]))
-    # with open(output_dir + '/test.csv', 'w') as f:
-    #     f.write('\n'.join([','.join(line) for line in test_set]))
+    with open(output_dir + '/test.csv', 'w') as f:
+        f.write('\n'.join([','.join(line) for line in test_set]))
+    val_set = return_dataset(valList, src_dir, output_dir, type='val')
+    with open(output_dir + '/val.csv', 'w') as f:
+        f.write('\n'.join([','.join(line) for line in val_set]))
 
 
 def generate_data(src_dir, output_dir, split=10):
@@ -180,9 +216,30 @@ def get_boundingbox(face, width, height, scale=1.3, minsize=None):
 
     return x1, y1, size_bb
 
+def detect_face(frame, face_detector, type='dlib'):
+    if type == 'dlib':
+        height, width = frame.shape[:2]
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = face_detector(gray, 1)
+        if len(faces):
+            # For now only take biggest face
+            face = faces[0].rect
+            x, y, size = get_boundingbox(face, width, height)
+            # generate cropped image
+            cropped_face = frame[y:y + size, x:x + size]
+            return cropped_face
+        else:
+            return None
+    else:
+        cropped_face = face_detector(frame)
+        return cropped_face
 
-def return_dataset(list, src_dir, output_dir, type='train'):
-    face_detector = dlib.cnn_face_detection_model_v1('./mmod_human_face_detector.dat')
+
+def return_dataset(list, src_dir, output_dir, type='train', fd='MTCNN'):
+    if fd == 'dlib':
+        face_detector = dlib.cnn_face_detection_model_v1('./mmod_human_face_detector.dat')
+    else:
+        face_detector = MTCNN(device='cuda')
     dataset = []
     for videoName, className in tqdm(list):
         class_dir = os.path.join(output_dir, type, str(className))
@@ -198,20 +255,14 @@ def return_dataset(list, src_dir, output_dir, type='train'):
         frame_index = 0
         success, frame = video_fd.read()
         while success:
-            img_path = os.path.join(output_dir, type, str(className),
-                                    '%s_%d.jpg' % (videoName.split('/')[-1], frame_index))
-            height, width = frame.shape[:2]
+            img_path = os.path.join(output_dir, type, str(className),'%s_%d.jpg'
+                                    % (videoName.split('/')[-4] + '_' + videoName.split('/')[-1], frame_index))
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = face_detector(gray, 1)
-            if len(faces):
-                # For now only take biggest face
-                face = faces[0].rect
-                x, y, size = get_boundingbox(face, width, height)
-                # generate cropped image
-                cropped_face = frame[y:y + size, x:x + size]
+            cropped_face = detect_face(gray, face_detector, fd)
+            if cropped_face is not None:
                 cv2.imwrite(img_path, cropped_face)
             # info = [str(className), videoName.split('/')[-1], img_path.replace('/Users/pu/Desktop', '/home/puwenbo')]
-            info = [str(className), videoName.split('/')[-1], img_path]
+            info = [str(className), videoName.split('/')[-4] + '_' + videoName.split('/')[-1], img_path]
             # 将视频帧信息保存起来
             dataset.append(info)
             frame_index += 1
@@ -224,9 +275,9 @@ def return_dataset(list, src_dir, output_dir, type='train'):
 
 def parse_args():
     parser = argparse.ArgumentParser(usage='')
-    parser.add_argument('-i', '--src_dir', help='path to datasets', default='/home/asus/Celeb-DF-v2/')
-    parser.add_argument('-o', '--output_dir', help='path to output', default='/home/asus/celeb_')
-    parser.add_argument('-t', '--type', default='Deepfakes')
+    parser.add_argument('-i', '--src_dir', help='path to datasets', default='/home/asus/Datasets/Deepfake/faceforencis++')
+    parser.add_argument('-o', '--output_dir', help='path to output', default='/home/asus/test/')
+    parser.add_argument('-t', '--type', default='all')
     parser.add_argument('-g', '--gpu', default='0')
     parser.add_argument('-s', '--split', type=int, default=10)
     args = parser.parse_args()
@@ -236,6 +287,6 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-    generate_data(args.src_dir, args.output_dir + str(args.split), args.split)
-    # generate_fftest(args.src_dir, args.output_dir, args.type)
+    # generate_data(args.src_dir, args.output_dir + str(args.split), args.split)
+    generate_fftest(args.src_dir, args.output_dir, args.type)
     # generate_dfdc(**vars(args))

@@ -1,0 +1,36 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../jerror.h
+
+../jmorecfg.h
+
+../jpegint.h
+
+../jpeglib.h
+jconfig.h
+../jconfig.h
+jmorecfg.h
+../jmorecfg.h
+jpegint.h
+../jpegint.h
+jerror.h
+../jerror.h
+
+/Users/pu/Downloads/libjpeg-turbo-2.0.3/jcstest.c
+stdio.h
+-
+jpeglib.h
+-
+jerror.h
+-
+setjmp.h
+-
+
+jconfig.h
+
