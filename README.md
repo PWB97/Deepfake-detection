@@ -35,11 +35,11 @@ Wenbo Pu<sup>1</sup>, Jing Hu<sup>1</sup>, Xin Wang<sup>2</sup>, Yuezun Li<sup>3
   python test.py
   ```
 
-We provided our method, Xception, FWA, Mesonet, Capsule and others to train and test in this repository. Go to **config.py** to change the configurations.
+We provided our method, Xception, FWA, Mesonet, Capsule and others to train and test in this repository. Go to `config.py` to change the configurations.
 
 ## Training data preparation
 
-We provided a script to generate training and test data for this repository. Use **make_train_test.py**.
+We provided a script to generate training and test data for this repository. Use `make_train_test.py`.
 
 ## Notice
 
