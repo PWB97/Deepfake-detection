@@ -1,7 +1,3 @@
----
-
----
-
 # Learning a Deep Dual-level Network for Robust DeepFake Detection
 
 Wenbo Pu<sup>1</sup>, Jing Hu<sup>1</sup>, Xin Wang<sup>2</sup>, Yuezun Li<sup>3</sup>, Bin Zhu<sup>4</sup>, Bin Kong<sup>2</sup>, Youbing Yin<sup>2</sup>, Qi Song<sup>2</sup>,  Xi Wu<sup>1</sup>, Siwei Lyu<sup>5</sup>
