@@ -1,8 +1,12 @@
+---
+
+---
+
 # Learning a Deep Dual-level Network for Robust DeepFake Detection
 
-Wenbo Pu, Jing Hu, Xin Wang, Yuezun Li, Bin Zhu, Bin Kong, Youbing Yin, Qi Song,   Xi Wu, Siwei Lyu
+Wenbo Pu<sup>1</sup>, Jing Hu<sup>1</sup>, Xin Wang<sup>2</sup>, Yuezun Li<sup>3</sup>, Bin Zhu<sup>4</sup>, Bin Kong<sup>2</sup>, Youbing Yin<sup>2</sup>, Qi Song<sup>2</sup>,  Xi Wu<sup>1</sup>, Siwei Lyu<sup>5</sup>
 
-Chengdu University of Information Technology, Chengdu, China; Keya Medical, Seattle, USA; Ocean University of China; Microsoft Research Asia, Beijing, China; University at Buffalo, State University of New York, USA.
+<sup>1</sup>Chengdu University of Information Technology, Chengdu, China; <sup>2</sup>Keya Medical, Seattle, USA; <sup>3</sup>Ocean University of China; <sup>4</sup>Microsoft Research Asia, Beijing, China; <sup>5</sup>University at Buffalo, State University of New York, USA.
 
 
 
