@@ -12,7 +12,7 @@ Wenbo Pu<sup>1</sup>, Jing Hu<sup>1</sup>, Xin Wang<sup>2</sup>, Yuezun Li<sup>3
 
 ## Imbalanced Performance
 
-<img src="./imbalanced performance.png" alt="60" width = "80%" />
+<img src="./imbalanced performance.png" alt="60" width = "50%" />
 
 ## Requirements
 
