@@ -16,7 +16,7 @@ import torch.backends.cudnn as cudnn
 import numpy as np
 from torch.autograd import Variable
 from torch.optim import Adam
-import torchvision.transforms as transforms
+# import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import argparse
@@ -24,16 +24,15 @@ from sklearn import metrics
 import model_big
 import pandas
 
-import config
-from dataloader import FrameDataset
+from utils.dataloader import FrameDataset
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', default='/home/asus/celeb_20', help='path to root dataset')
+parser.add_argument('--dataset', default='', help='path to root dataset')
 # parser.add_argument('--train_set', default='train', help='train set')
 # parser.add_argument('--val_set', default='validation', help='validation set')
 # parser.add_argument('--workers', type=int, help='number of data loading workers', default=0)
-# parser.add_argument('--batchSize', type=int, default=32, help='batch size')
+parser.add_argument('--batch_size', type=int, default=32, help='batch size')
 # parser.add_argument('--imageSize', type=int, default=300, help='the height / width of the input image to network')
 parser.add_argument('--niter', type=int, default=20, help='number of epochs to train for')
 parser.add_argument('--lr', type=float, default=0.0005, help='learning rate')
@@ -112,7 +111,11 @@ if __name__ == "__main__":
     dataloaders = {}
     for name in ['train', 'test']:
         raw_data = pandas.read_csv(os.path.join(opt.dataset, '%s.csv' % name))
-        dataloaders[name] = DataLoader(FrameDataset(raw_data.to_numpy()), **config.dataset_params)
+        dataloaders[name] = DataLoader(FrameDataset(raw_data.to_numpy()),
+                                           batch_size=opt.batch_size,
+                                           shuffle=True,
+                                           num_workers=4,
+                                           pin_memory=False)
 
     for epoch in range(opt.resume + 1, opt.niter + 1):
         count = 0

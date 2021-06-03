@@ -12,11 +12,11 @@ IMGWIDTH = 64
 
 
 def getPrecision(y_true, y_pred):
-    TP = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))#TP
-    N = (-1)*K.sum(K.round(K.clip(y_true-K.ones_like(y_true), -1, 0)))#N
-    TN=K.sum(K.round(K.clip((y_true-K.ones_like(y_true))*(y_pred-K.ones_like(y_pred)), 0, 1)))#TN
-    FP=N-TN
-    precision = TP / (TP + FP + K.epsilon())#TT/P
+    TP = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))  # TP
+    N = (-1) * K.sum(K.round(K.clip(y_true - K.ones_like(y_true), -1, 0)))  # N
+    TN = K.sum(K.round(K.clip((y_true - K.ones_like(y_true)) * (y_pred - K.ones_like(y_pred)), 0, 1)))  # TN
+    FP = N - TN
+    precision = TP / (TP + FP + K.epsilon())  # TT/P
     return precision
 
 
@@ -50,9 +50,10 @@ def f1(y_true, y_pred):
         predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
         precision = true_positives / (predicted_positives + K.epsilon())
         return precision
+
     precision = precision(y_true, y_pred)
     recall = recall(y_true, y_pred)
-    return 2*((precision*recall)/(precision+recall+K.epsilon()))
+    return 2 * ((precision * recall) / (precision + recall + K.epsilon()))
 
 
 class Classifier:
@@ -139,8 +140,8 @@ class MesoInception4(Classifier):
     def __init__(self, learning_rate=0.001):
         self.model = self.init_model()
         optimizer = Adam(lr=learning_rate)
-        self.model.compile(optimizer=optimizer, loss='mean_squared_error',metrics=['accuracy', 'AUC', f1,
-                                                                                     'Recall'])
+        self.model.compile(optimizer=optimizer, loss='mean_squared_error', metrics=['accuracy', 'AUC', f1,
+                                                                                    'Recall'])
 
     def InceptionLayer(self, a, b, c, d):
         def func(x):

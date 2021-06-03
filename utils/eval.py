@@ -9,7 +9,7 @@ import argparse
 import cv2
 
 from dataloader import Dataset
-from model import CNNEncoder, RNNDecoder
+from models.model import CNNEncoder, RNNDecoder
 import config
 
 def load_imgs_from_video(path: str)->list:

@@ -7,11 +7,12 @@ from torch.autograd import Function
 import numpy as np
 import cv2
 
-from model import Baseline
+from models.model import Baseline
 
 import os
 import argparse
 import config
+
 
 class FeatureExtractor():
     """ Class for extracting activations and
@@ -210,6 +211,7 @@ class GuidedBackpropReLUModel:
 
         return output
 
+
 def deprocess_image(img):
     """ see https://github.com/jacobgil/keras-grad-cam/blob/master/grad-cam.py#L65 """
     img = img - np.mean(img)
@@ -219,15 +221,18 @@ def deprocess_image(img):
     img = np.clip(img, 0, 1)
     return np.uint8(img * 255)
 
+
 def parse_args():
-    parser = argparse.ArgumentParser(usage='python3 train.py -i path/to/data -r path/to/checkpoint')
-    parser.add_argument('-r', '--restore_from', help='path to the checkpoint', default='/data2/guesthome/wenbop/modules/new-bi-model_type-baseline_gru_ep-17.pth')
+    parser = argparse.ArgumentParser(usage='python3 main.py -i path/to/data -r path/to/checkpoint')
+    parser.add_argument('-r', '--restore_from', help='path to the checkpoint',
+                        default='/data2/guesthome/wenbop/modules/new-bi-model_type-baseline_gru_ep-17.pth')
     # parser.add_argument('-g', '--gpu', help='visible gpu ids', default='4,5,7')
     parser.add_argument('-i', '--image-path', type=str, default='/data2/guesthome/wenbop/ffdf/test/0/',
                         help='Input image path')
     parser.add_argument('-g', '--gpu', help='visible gpu ids', default='0,1,2,3')
     args = parser.parse_args()
     return args
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -244,7 +249,7 @@ if __name__ == "__main__":
     # 从断点继续训练
     if args.restore_from is not None:
         ckpt = torch.load(args.restore_from)
-        #model.load_state_dict(ckpt['net'])
+        # model.load_state_dict(ckpt['net'])
         model.load_state_dict(ckpt['model_state_dict'])
         print('Model is loaded from %s' % (args.restore_from))
 
@@ -270,5 +275,5 @@ if __name__ == "__main__":
     cam_gb = deprocess_image(cam_mask * gb)
     gb = deprocess_image(gb)
 
-    cv2.imwrite('./gram/'+ args.image_path.split('/')[-1] +'_gb.jpg', gb)
-    cv2.imwrite('./gram/'+ args.image_path.split('/')[-1] +'_cam_gb.jpg', cam_gb)
+    cv2.imwrite('./gram/' + args.image_path.split('/')[-1] + '_gb.jpg', gb)
+    cv2.imwrite('./gram/' + args.image_path.split('/')[-1] + '_cam_gb.jpg', cam_gb)

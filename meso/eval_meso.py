@@ -3,13 +3,13 @@ import os
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 import numpy as np
-from sklearn.metrics import accuracy_score, roc_auc_score, f1_score, recall_score, precision_score, roc_curve
+from sklearn.metrics import accuracy_score, f1_score, recall_score, precision_score, roc_curve
 
 from tqdm import tqdm
 
 from meso.meso import *
 
-validation_data_path = '/home/asus/ffdf_40/test'
+validation_data_path = ''
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '2, 3'
 
@@ -22,10 +22,9 @@ frame_y_pred = []
 
 model = MesoInception4()
 # model = Meso4()
-model.load('/home/asus/Code/checkpoint/ff/msin/weights.h5')
+model.load('')
 
 test_datagen = ImageDataGenerator(rescale=1. / 255)
-
 
 validation_generator = test_datagen.flow_from_directory(
     validation_data_path,
@@ -42,7 +41,6 @@ for X, y in tqdm(validation_generator, desc='Validating'):
     if i >= 37:
         break
 
-
 gd = np.array(frame_y_gd)
 pred = np.array(frame_y_pred)
 pred_pro = pred
@@ -55,8 +53,8 @@ test_frame_f1 = f1_score(gd, pred)
 test_frame_pre = precision_score(gd, pred)
 test_frame_recall = recall_score(gd, pred)
 
-np.save('./m/msi/f_fpr.npy', f_fpr)
-np.save('./m/msi/f_tpr.npy', f_tpr)
+np.save('', f_fpr)
+np.save('', f_tpr)
 
 print('acc:, auc:, f1_score, precision_score, recall_score')
 print(test_frame_acc, test_frame_auc, test_frame_f1, test_frame_pre, test_frame_recall)

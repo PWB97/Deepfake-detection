@@ -14,9 +14,8 @@ img_width, img_height = 64, 64
 batch_size = 2000
 epochs = 20
 
-train_data_path = '/home/asus/celeb_20/train'
-validation_data_path = '/home/asus/celeb_20/test'
-
+train_data_path = ''
+validation_data_path = ''
 
 # model = Meso4().model
 model = MesoInception4().model
@@ -50,19 +49,19 @@ model.fit_generator(
 
 target_dir = './meso/'
 if not os.path.exists(target_dir):
-  os.mkdir(target_dir)
+    os.mkdir(target_dir)
 model.save('./meso/model.h5')
 model.save_weights('./meso/weights.h5')
 
-#Calculate execution time
+# Calculate execution time
 end = time.time()
-dur = end-start
+dur = end - start
 
-if dur<60:
+if dur < 60:
     print("Execution Time:", dur, "seconds")
-elif dur>60 and dur<3600:
-    dur=dur/60
-    print("Execution Time:",dur,"minutes")
+elif dur > 60 and dur < 3600:
+    dur = dur / 60
+    print("Execution Time:", dur, "minutes")
 else:
-    dur=dur/(60*60)
-    print("Execution Time:",dur,"hours")
+    dur = dur / (60 * 60)
+    print("Execution Time:", dur, "hours")

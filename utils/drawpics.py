@@ -5,7 +5,6 @@ from matplotlib.pyplot import MultipleLocator
 from utils.dataloader import *
 
 
-
 def draw_compare():
     plt.figure()
     # plt.title('', fontsize=20)
@@ -18,12 +17,12 @@ def draw_compare():
     plt.plot(['1:10', '1:20', '1:30'], [0.63, 0.67, 0.56], label='Capsule', marker='*')
     plt.plot(['1:10', '1:20', '1:30'], [0.91, 0.92, 0.78], label='Ours', marker='D')
 
-    plt.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
-                mode="expand", borderaxespad=0, ncol=5)
+    plt.legend(bbox_to_anchor=(0, 1.02, 1, 0.2), loc="lower left",
+               mode="expand", borderaxespad=0, ncol=5)
     plt.savefig('compare.pdf')
 
-def draw_AUC():
 
+def draw_AUC():
     f_fpr = np.load('/home/asus/Code/pvc/m/bs/f_fpr.npy')
     f_tpr = np.load('/home/asus/Code/pvc/m/bs/f_tpr.npy')
     f_roc_auc = auc(f_fpr, f_tpr)

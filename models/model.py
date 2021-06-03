@@ -50,8 +50,8 @@ class Baseline(nn.Module):
 
         self.fc_cnn = nn.Linear(fc_in, num_classes)
 
-        # self.global_pool = nn.AdaptiveAvgPool2d(16)
-        self.global_pool = nn.AdaptiveMaxPool2d(1)
+        self.global_pool = nn.AdaptiveAvgPool2d(16)
+        # self.global_pool = nn.AdaptiveMaxPool2d(1)
 
         self.fc_rnn = nn.Linear(256, self.num_classes)
 
@@ -90,7 +90,7 @@ class Baseline(nn.Module):
 
         x = self.global_pool(rnn_out)
         x = torch.flatten(x, start_dim=1)
-        # x = self.fc_rnn(x)
+        x = self.fc_rnn(x)
 
         if self.inputgate:
             if self.bi_branch:

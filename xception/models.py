@@ -6,7 +6,6 @@ import os, sys
 # sys.path.append('../')
 import argparse
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -24,7 +23,7 @@ def return_pytorch04_xception(pretrained=True):
         del model.last_linear
         # import pdb; pdb.set_trace()
         state_dict = torch.load(os.path.dirname(__file__) + '/xception.pth')
-            # './trained_model/xception.pth')
+        # './trained_model/xception.pth')
         for name, weights in state_dict.items():
             if 'pointwise' in name:
                 state_dict[name] = weights.unsqueeze(-1).unsqueeze(-1)
@@ -39,6 +38,7 @@ class TransferModel(nn.Module):
     Simple transfer learning model that takes an imagenet pretrained model with
     a fc layer as base model and retrains a new fc layer for num_out_classes
     """
+
     def __init__(self, modelchoice, num_out_classes=2, dropout=0.0):
         super(TransferModel, self).__init__()
         self.modelchoice = modelchoice
@@ -139,5 +139,6 @@ if __name__ == '__main__':
     print(model)
     model = model.cuda()
     from torchsummary import summary
+
     input_s = (3, image_size, image_size)
     print(summary(model, input_s))

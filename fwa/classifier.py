@@ -1,9 +1,8 @@
-
 import torch
 from torch import nn
 from torchvision import models
-import torch.nn.functional as F
-import os, math
+# import torch.nn.functional as F
+import math
 
 
 class ResNet(nn.Module):
@@ -45,7 +44,6 @@ class ResNet(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
-
 
 
 class SPPNet(nn.Module):
@@ -99,4 +97,3 @@ class SpatialPyramidPool2D(nn.Module):
             else:
                 out = torch.cat((out, y.view(y.size()[0], -1)), 1)
         return out
-

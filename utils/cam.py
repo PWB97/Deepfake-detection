@@ -10,7 +10,7 @@ import numpy as np
 import argparse
 import os
 import torch.nn as nn
-from model import Baseline
+from models.model import Baseline
 import config
 
 

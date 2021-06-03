@@ -8,15 +8,14 @@ import pandas
 import os
 import argparse
 
-from model import cRNN, get_resnet_3d, CNN, Baseline
-from models import model_selection
+from models.model import cRNN, get_resnet_3d, CNN, Baseline
 from dataloader import FrameDataset, Dataset
 import config
 from sklearn.metrics import roc_curve, auc
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 
-def test(model:nn.Sequential, test_loader:torch.utils.data.DataLoader, model_type, device):
+def test(model: nn.Sequential, test_loader: torch.utils.data.DataLoader, model_type, device):
     model.eval()
 
     print('Size of Test Set: ', len(test_loader.dataset))
@@ -49,8 +48,10 @@ def test(model:nn.Sequential, test_loader:torch.utils.data.DataLoader, model_typ
                 test_video_auc = roc_auc_score(y_gd, y_pred)
                 test_frame_acc = accuracy_score(frame_y_gd, frame_y_pred)
                 test_frame_auc = roc_auc_score(frame_y_gd, frame_y_pred)
-                print('Test video avg loss: %0.4f, acc: %0.2f, auc: %0.2f\n' % (test_loss, test_video_acc, test_video_auc))
-                print('Test frame avg loss: %0.4f, acc: %0.2f, auc: %0.2f\n' % (test_loss, test_frame_acc, test_frame_auc))
+                print('Test video avg loss: %0.4f, acc: %0.2f, auc: %0.2f\n' % (
+                test_loss, test_video_acc, test_video_auc))
+                print('Test frame avg loss: %0.4f, acc: %0.2f, auc: %0.2f\n' % (
+                test_loss, test_frame_acc, test_frame_auc))
 
 
         else:
@@ -66,15 +67,18 @@ def test(model:nn.Sequential, test_loader:torch.utils.data.DataLoader, model_typ
 
     return frame_y_gd, frame_y_pred
 
+
 def parse_args():
-    parser = argparse.ArgumentParser(usage='python3 train.py -i path/to/data -r path/to/checkpoint')
+    parser = argparse.ArgumentParser(usage='python3 main.py -i path/to/data -r path/to/checkpoint')
     parser.add_argument('-i', '--data_path', help='path to your datasets', default='/data2/guesthome/wenbop/ffdf_c40')
     # parser.add_argument('-i', '--data_path', help='path to your datasets', default='/Users/pu/Desktop/dataset_dlib')
-    parser.add_argument('-r', '--restore_from', help='path to the checkpoint', default='/data2/guesthome/wenbop/modules/ff/bi-model_type-baseline_gru_ep-19.pth')
+    parser.add_argument('-r', '--restore_from', help='path to the checkpoint',
+                        default='/data2/guesthome/wenbop/modules/ff/bi-model_type-baseline_gru_ep-19.pth')
     # parser.add_argument('-g', '--gpu', help='visible gpu ids', default='4,5,7')
     parser.add_argument('-g', '--gpu', help='visible gpu ids', default='0,1,2,3')
     args = parser.parse_args()
     return args
+
 
 def draw_auc():
     fpr = dict()
@@ -88,7 +92,7 @@ def draw_auc():
     dataloader = DataLoader(Dataset(raw_data.to_numpy()), **config.dataset_params)
     use_cuda = torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
-    model = Baseline(**config.net_params)
+    model = Baseline()
     device_count = torch.cuda.device_count()
     if device_count > 1:
         print('使用{}个GPU训练'.format(device_count))
@@ -102,7 +106,7 @@ def draw_auc():
         model.load_state_dict(ckpt['model_state_dict'])
         print('Model is loaded from %s' % (args.restore_from))
 
-    y_test, y_score  = test(model, dataloader, 'baseline', device)
+    y_test, y_score = test(model, dataloader, 'baseline', device)
 
     for i in range(2):
         fpr[i], tpr[i], _ = roc_curve(y_test[:, i], y_score[:, i])
@@ -119,5 +123,6 @@ def draw_auc():
         plt.title('Receiver operating characteristic example')
         plt.legend(loc="lower right")
         plt.show()
+
 
 draw_auc()

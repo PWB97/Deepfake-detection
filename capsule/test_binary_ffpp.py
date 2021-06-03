@@ -26,8 +26,7 @@ from sklearn.metrics import roc_curve
 import model_big
 import pandas
 
-import config
-from dataloader import FrameDataset
+from utils.dataloader import FrameDataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', default ='databases/faceforensicspp', help='path to dataset')
@@ -62,7 +61,11 @@ if __name__ == '__main__':
     #     raw_data = pandas.read_csv(os.path.join(opt.dataset, '%s.csv' % name))
     #     dataloaders[name] = DataLoader(FrameDataset(raw_data.to_numpy()), **config.dataset_params)
     raw_data = pandas.read_csv(os.path.join(opt.dataset, 'test.csv'))
-    dataloader_test = DataLoader(FrameDataset(raw_data.to_numpy()), **config.dataset_params)
+    dataloader_test = DataLoader(FrameDataset(raw_data.to_numpy()),
+                                           batch_size=opt.batchSize,
+                                           shuffle=True,
+                                           num_workers=4,
+                                           pin_memory=False)
     vgg_ext = model_big.VggExtractor()
     capnet = model_big.CapsuleNet(2, opt.gpu_id)
 

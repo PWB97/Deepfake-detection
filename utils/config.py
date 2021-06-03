@@ -1,8 +1,4 @@
-img_w = 64
-img_h = img_w
-
 dataset_params = {
-    'batch_size': 2,
     'shuffle': True,
     'num_workers': 4,
     'pin_memory': False
@@ -11,7 +7,6 @@ dataset_params = {
 net_params = {
     'use_gru': True,
     'bi_branch': True,
-    'num_classes': 1,
     'dct': False,
     'inputgate': False
 }
