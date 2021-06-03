@@ -18,21 +18,8 @@ Wenbo Pu<sup>1</sup>, Jing Hu<sup>1</sup>, Xin Wang<sup>2</sup>, Yuezun Li<sup>3
 
 <img src="./imgs/imbalanced performance.png" width="50%" />
 
-## Requirements
 
-- Pytorch 1.4.0
-- Ubuntu 16.04
-- CUDA 10.0
-- Python 3.6
-- Dlib 19.0
-
-## Usage
-
-- To train and test a model, use 
-
-  ```shell
-  python main.py
-  ```
+## Info
 
 We provided our method, Xception<sup>6</sup>, FWA<sup>7</sup>, MesoNet<sup>8</sup>, Capsule<sup>9</sup> and others to train and test in this repository. Xception and FWA can be train or test at `main.py` while the other methods can be found in their individual folders, such as Capsule in `capsule/`.
 
@@ -42,16 +29,35 @@ We also implemented Face X-ray for data-augumentation ( not used in our paper ),
 
 The implementation of AUC loss we proposed in our paper can be found in `utils/aucloss.py`.
 
+
+## Requirements
+
+- Pytorch 1.4.0
+- Ubuntu 16.04
+- CUDA 10.0
+- Python 3.6
+- Dlib 19.0
+
+## Usage 
+
+- To train and test a model, use 
+
+  ```shell
+  python main.py -i input_path -r restore_from -g gpu_id
+  ```
+
+- More parameters can be adjusted in `main.py`.
+
 ## Training data preparation
 
-We provided a script to generate training and test data for this repository. Use `make_train_test.py`. This script can preprocess FaceForensics++<sup>6</sup>, Celeb-DF<sup>11</sup> and DFDC<sup>12</sup> datasets using [MTCNN](https://github.com/ipazc/mtcnn) or [Dlib](https://github.com/davisking/dlib/).
+We provided a script to generate training and test data for this repository. Use `make_train_test.py`. This script can preprocess FaceForensics++, Celeb-DF and DFDC datasets using [MTCNN](https://github.com/ipazc/mtcnn) or [Dlib](https://github.com/davisking/dlib/).
 
 ## Notice
 
 This repository is NOT for commecial use. It is provided "as it is" and we are not responsible for any subsequence of using this code.
 
 
-##Thanks
+## Thanks
 
 <sup>6</sup> [FaceForensics++ Learning to Detect Manipulated Facial Images](https://github.com/ondyari/FaceForensics) </br>
 <sup>7</sup> [Exposing DeepFake Videos By Detecting Face Warping Artifacts](https://github.com/yuezunli/CVPRW2019_Face_Artifacts) </br>
