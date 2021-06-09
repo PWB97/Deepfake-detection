@@ -29,6 +29,8 @@ We also implemented Face X-ray for data-augumentation ( not used in our paper ),
 
 The implementation of AUC loss we proposed in our paper can be found in `utils/aucloss.py`.
 
+Our checkpoint can be found [here](https://drive.google.com/file/d/144ol1u4Kz4HwOsG3qvEeVqH8bpqCvaOU/view?usp=sharing).
+
 
 ## Requirements
 
