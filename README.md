@@ -44,7 +44,7 @@ Our checkpoint can be found [here](https://drive.google.com/file/d/144ol1u4Kz4Hw
 
 - We provide a demo to show how our model work. See `demo/demo.py`
   ```shell
-    python demo.py --restore_from restore_from -- path video path
+  python demo.py --restore_from restore_from -- path video path
   ```
 
 - To train and test a model, use 
