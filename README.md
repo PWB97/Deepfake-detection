@@ -40,6 +40,11 @@ The implementation of AUC loss we proposed in our paper can be found in `utils/a
 
 ## Usage 
 
+- We provide a demo to show how our model work. See `demo/demo.py`
+  ```shell
+    python demo.py --restore_from restore_from -- path video path
+  ```
+
 - To train and test a model, use 
 
   ```shell
