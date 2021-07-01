@@ -42,7 +42,7 @@ class Baseline(nn.Module):
         }
 
         if bidirectional:
-            fc_in = 2*rnn_hidden_nodes
+            fc_in = 2 * rnn_hidden_nodes
         else:
             fc_in = rnn_hidden_nodes
 
@@ -51,7 +51,6 @@ class Baseline(nn.Module):
         self.fc_cnn = nn.Linear(fc_in, num_classes)
 
         self.global_pool = nn.AdaptiveAvgPool2d(16)
-        # self.global_pool = nn.AdaptiveMaxPool2d(1)
 
         self.fc_rnn = nn.Linear(256, self.num_classes)
 
@@ -70,8 +69,6 @@ class Baseline(nn.Module):
             if self.inputgate:
                 x, gate_activations = self.inp_GM(x_3d[:, t, :, :, :])
                 gates.append(gate_activations)
-                # for ga in gate_activations:
-                #     acts += torch.mean(ga)
             x = self.cnn(x_3d[:, t, :, :, :])
             x = torch.flatten(x, start_dim=1)
             cnn_embedding_out.append(x)
@@ -115,6 +112,7 @@ class Baseline(nn.Module):
                 elif isinstance(m, nn.BatchNorm2d):
                     constant_init(m, 1)
 
+
 class CNN(nn.Module):
     def __init__(self, bi_branch=False, num_classes=2):
         super(CNN, self).__init__()
@@ -134,12 +132,6 @@ class CNN(nn.Module):
             nn.Linear(2048, 2)
         )
 
-        # self.max_pool = nn.AdaptiveAvgPool2d(16)
-
-        # self.fc_out = nn.Sequential(
-        #     nn.Linear(256, self.num_classes)
-        # )
-
     def forward(self, x_3d):
         """
         输入的是T帧图像，shape = (batch_size, t, h, w, 3)
@@ -154,9 +146,7 @@ class CNN(nn.Module):
         cnn_embedding_out = torch.stack(cnn_embedding_out, dim=0).transpose(0, 1)
 
         x = self.global_pool(cnn_embedding_out)
-        # x = self.max_pool(cnn_embedding_out)
         x = torch.flatten(x, start_dim=1)
-        # x = self.fc_out(x)
 
         return x
 
