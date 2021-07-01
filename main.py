@@ -10,6 +10,7 @@ from utils.tools import *
 from utils.focalloss import *
 from utils.aucloss import AUCLoss
 from self_attention_cv import ResNet50ViT, ViT
+from xception.models import model_selection
 
 models = ['ours', 'cRNN', 'end2end', 'xception', 'fwa', 'resvit', 'vit', 'res50', 'res101', 'res152']
 
@@ -19,8 +20,8 @@ def train_on_epochs(train_loader: DataLoader, test_loader: DataLoader, opt):
     device = torch.device('cuda' if use_cuda else 'cpu')
 
     model_type = models[opt.model_type]
-    if model_type == 'baseline':
-        model = Baseline(use_gru=opt.use_gru, bi_branch=opt.net_type == 2)
+    if model_type == 'ours':
+        model = Baseline(use_gru=opt.use_gru, bi_branch=(opt.net_type == 2))
     elif model_type == 'cRNN':
         model = cRNN()
     elif model_type == 'end2end':
@@ -314,13 +315,13 @@ def validation(model: nn.Sequential, test_loader: torch.utils.data.DataLoader, w
 
 def parse_args():
     parser = argparse.ArgumentParser(usage='python3 main.py to train or test different models with different loss')
-    parser.add_argument('-i', '--data_path', help='path to your datasets', default='～')
+    parser.add_argument('-i', '--data_path', help='path to your datasets', default='/Users/pu/Desktop/dataset_dlib')
     parser.add_argument('-r', '--restore_from', help='path to the checkpoint', default=None)
     parser.add_argument('-g', '--gpu', help='visible gpu ids', default='0')
     parser.add_argument('-fs', '--frame_size', help='size of video frames', default=300)
     parser.add_argument('-is', '--img_size', help='size of input image', default=64)
     parser.add_argument('-nt', '--net_type', help='type of net, 0 for video level, 1 for frame level, 2 for dual level',
-                        default=0)
+                        default=2)
     parser.add_argument('-e', '--epoch', help='batch size', default=20)
     parser.add_argument('-b', '--batch_size', help='batch size', default=16)
     parser.add_argument('-l', '--learning_rate', help='learning rate', default=1e-4)
@@ -348,13 +349,14 @@ if __name__ == "__main__":
     for name in ['train', 'test']:
         raw_data = pandas.read_csv(os.path.join(data_path, '%s.csv' % name))
         if opt.net_type == 1 and opt.mode:
-            dataloaders[name] = DataLoader(FrameDataset(raw_data.to_numpy()),
+            dataloaders[name] = DataLoader(FrameDataset(raw_data.to_numpy(), img_size=opt.img_size),
                                            batch_size=opt.batch_size,
                                            shuffle=True,
                                            num_workers=4,
                                            pin_memory=False)
         elif opt.net_type != 1:
-            dataloaders[name] = DataLoader(Dataset(data_list=raw_data.to_numpy(), frame_num=opt.size),
+            dataloaders[name] = DataLoader(Dataset(data_list=raw_data.to_numpy(), frame_num=opt.frame_size,
+                                                   img_size=opt.img_size),
                                            batch_size=opt.batch_size,
                                            shuffle=True,
                                            num_workers=4,

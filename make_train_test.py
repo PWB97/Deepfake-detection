@@ -1,8 +1,9 @@
 import os
 import cv2
 from tqdm import tqdm
-import argparse
 import dlib
+
+import argparse
 import json
 import random
 from facenet_pytorch.models.mtcnn import MTCNN
@@ -384,7 +385,7 @@ def return_dataset_o(list, src_dir, output_dir, type='train'):
         while success:
             img_path = os.path.join(output_dir, type, str(className),
                                     '%s_%d.jpg' % (
-                                    videoName.split('/')[-4] + '_' + videoName.split('/')[-1], frame_index))
+                                        videoName.split('/')[-4] + '_' + videoName.split('/')[-1], frame_index))
             height, width = frame.shape[:2]
             height = int(height / 2)
             width = int(width / 2)
