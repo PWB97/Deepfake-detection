@@ -3,12 +3,10 @@ from torch.utils import data
 from torchvision import transforms
 
 from tqdm import tqdm
-import dlib
 import cv2
 import numpy as np
 from PIL import Image
 
-import config
 import os
 import random
 import datasets.cvtransforms as cvtransforms
@@ -56,7 +54,7 @@ class AddGaussianNoise(object):
 
 
 class FrameDataset(data.Dataset):
-    def __init__(self, data_list=[], skip_frame=1, frame_num=300):
+    def __init__(self, data_list=[], skip_frame=1, frame_num=300, img_size=64):
 
         # 用来将类别转换为one-hot数据
         self.labels = []
@@ -66,23 +64,17 @@ class FrameDataset(data.Dataset):
         self.video_list = []
         # 是否直接加载至内存中，可以加快训练速
         self.use_mem = False
+        self.img_size = img_size
 
         self.skip_frame = skip_frame
         self.frame_num = frame_num
         self.data_list = self._build_data_list(data_list)
 
     def __len__(self):
-        # return len(self.data_list) // self.time_step
         return len(self.data_list)
 
     def __getitem__(self, index):
-        # 每次读取time_step帧图片
-        # index = index * self.time_step
-        # img = []
-        # video_name = self.video_list[index]
-        # for it in self.data_list:
-        #     if it[1] == video_name:
-        #         imgs.append(it)
+
         img = self.data_list[index]
 
         # 图片读取来源，如果设置了内存加速，则从内存中读取
@@ -91,16 +83,13 @@ class FrameDataset(data.Dataset):
         else:
             X = self._read_img_and_transform(img[2])
 
-        # 转换成tensor
-        # X = torch.stack(X, dim=0)
-
         # 为这些图片指定类别标签
         y = torch.tensor(self._label_category(img[0]))
         return X, y
 
     def transform(self, img):
         return transforms.Compose([
-            transforms.Resize((config.img_w, config.img_h)),
+            transforms.Resize((self.img_size, self.img_size)),
             transforms.ToTensor(),
             transforms.Normalize(
                 mean=[0.485, 0.456, 0.406],
@@ -131,8 +120,6 @@ class FrameDataset(data.Dataset):
             # 将图片数据加载到内存
             if self.use_mem:
                 self.images.append(self._read_img_and_transform(x[2]))
-            # path = x[2].replace('/home/puwenbo', '/Users/pu/Desktop')
-            # if os.path.exists(path):
             if os.path.exists(x[2]):
                 data_group[classname][videoname].append(list(x) + [len(self.images) - 1])
 
@@ -179,7 +166,7 @@ class FrameDataset(data.Dataset):
 
 
 class Dataset(data.Dataset):
-    def __init__(self, data_list=[], skip_frame=1, frame_num=300,
+    def __init__(self, data_list=[], skip_frame=1, frame_num=300, img_size=64,
                  aug=False, add_channel=False, dct=False, salt=False):
 
         # 用来将类别转换为one-hot数据
@@ -190,30 +177,29 @@ class Dataset(data.Dataset):
         self.video_list = []
         # 是否直接加载至内存中，可以加快训练速
         self.use_mem = False
+        self.img_size = img_size
 
         self.skip_frame = skip_frame
         self.frame_num = frame_num
-        self.data_list = self._build_data_list(data_list)
-        self.detector = dlib.get_frontal_face_detector()
         self.aug = aug
         self.add_channel = add_channel
         self.dct = dct
         self.salt = salt
-        self.time_step = 30
+
+        self.data_list = self._build_data_list(data_list)
+        if self.aug:
+            import dlib
+            self.detector = dlib.get_frontal_face_detector()
 
     def __len__(self):
-        # return len(self.data_list) // self.time_step
         return len(self.video_list)
 
     def __getitem__(self, index):
-        # 每次读取time_step帧图片
-        # index = index * self.time_step
         imgs = []
         video_name = self.video_list[index]
         for it in self.data_list:
             if it[1] == video_name:
                 imgs.append(it)
-        # imgs = self.data_list[index:index + self.time_step]
 
         # 图片读取来源，如果设置了内存加速，则从内存中读取
         if self.use_mem:
@@ -250,10 +236,10 @@ class Dataset(data.Dataset):
             mask = self.get_image_hull_mask(np.shape(img), landmarks).astype(np.uint8)
             g_mask = cv2.GaussianBlur(mask.astype(np.uint8) * 255, (5, 5), sigmaX=0) / 255
             mask_b = 4 * g_mask * (1 - g_mask)
-            mask_b = cv2.resize(mask_b, (config.img_w, config.img_w))
+            mask_b = cv2.resize(mask_b, (self.img_size, self.img_size))
             mask_b = mask_b[np.newaxis, :, :]
         else:
-            mask_b = np.zeros((1, config.img_w, config.img_w))
+            mask_b = np.zeros((1, self.img_size, self.img_size))
         return mask_b
 
     def img_aug(self, img):
@@ -282,7 +268,7 @@ class Dataset(data.Dataset):
 
     def cvt_transform(self, img):
         return cvtransforms.Compose([
-            cvtransforms.RandomResizedCrop(config.img_w),
+            cvtransforms.RandomResizedCrop(self.img_size),
             # cvtransforms.RandomHorizontalFlip(),
             cvtransforms.Upscale(upscale_factor=2),
             cvtransforms.TransformUpscaledDCT(),
@@ -299,7 +285,7 @@ class Dataset(data.Dataset):
     def transform(self, img):
         if not self.salt:
             return transforms.Compose([
-                transforms.Resize((config.img_w, config.img_h)),
+                transforms.Resize((self.img_size, self.img_size)),
                 # AddSaltPepperNoise(),
                 transforms.ToTensor(),
                 transforms.Normalize(
@@ -309,7 +295,7 @@ class Dataset(data.Dataset):
             ])(img)
         else:
             return transforms.Compose([
-                transforms.Resize((config.img_w, config.img_h)),
+                transforms.Resize((self.img_size, self.img_size)),
                 AddSaltPepperNoise(),
                 transforms.ToTensor(),
                 transforms.Normalize(
@@ -428,7 +414,7 @@ class Dataset(data.Dataset):
                     video_group[videoname] += [video_group[videoname][-1]] * (self.frame_num - video_len)
                     ret_list += video_group[videoname]
                 else:
-                    ret_list += video_group[videoname][0:self.frame_num:self.time_step]
+                    ret_list += video_group[videoname][:self.frame_num]
                 n += len(video_group[videoname])
 
         return ret_list

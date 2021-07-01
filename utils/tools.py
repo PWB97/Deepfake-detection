@@ -1,17 +1,10 @@
-import os
-
 import torch
-from torch import nn
 import pandas
 from PIL import Image
-import numpy as np
 
 from utils.dataloader import Dataset
 from make_train_test import *
-from xception.models import model_selection
 from meso.meso import *
-from capsule import model_big
-import config
 
 
 def load_datas(src_path, files=[]):
@@ -26,111 +19,8 @@ def load_datas(src_path, files=[]):
     return np.array(datas)
 
 
-def model_pred(src_path, model_type, restore):
-
-    os.environ["CUDA_VISIBLE_DEVICES"] = '0,1,2,3'
-
-    files = os.listdir(src_path)
-    # files.sort()
-    files = files[:30]
-
-    use_cuda = torch.cuda.is_available()
-    device = torch.device('cuda' if use_cuda else 'cpu')
-
-    datas = load_datas(src_path, files)
-
-    if model_type == 'baseline':
-        model = Baseline(**config.net_params)
-        model.to(device)
-        device_count = torch.cuda.device_count()
-        if device_count > 1:
-            print('使用{}个GPU训练'.format(device_count))
-            model = nn.DataParallel(model)
-        ckpt = torch.load(restore)
-        model.load_state_dict(ckpt['model_state_dict'])
-        with torch.no_grad():
-            X = torch.tensor(datas, dtype=torch.float32)
-            X = X.view((1, 30, 3, 64, 64))
-            X = X.to(device)
-            _, cnn_y = model(X)
-            cnn_y = torch.sigmoid(cnn_y)
-            for it in cnn_y:
-                print(it)
-    elif model_type == 'xception':
-        model, *_ = model_selection(modelname='xception', num_out_classes=2)
-        # model = torch.load(restore)
-        model.to(device)
-        device_count = torch.cuda.device_count()
-        if device_count > 1:
-            print('使用{}个GPU训练'.format(device_count))
-            model = nn.DataParallel(model)
-        ckpt = torch.load(restore)
-        model.load_state_dict(ckpt['model_state_dict'])
-        frame_y_pred = []
-        with torch.no_grad():
-            for X in datas:
-                X = torch.tensor(X, dtype=torch.float32)
-                X = X.view((1, 3, 64, 64))
-                X = X.to(device)
-                cnn_y = model(X)
-                frame_y_ = torch.softmax(cnn_y, dim=1)
-                frame_y_pred += frame_y_.cpu().numpy().tolist()
-            np.save('txcep.txt', np.array(frame_y_pred))
-    elif model_type == 'meso':
-        model = Meso4()
-        model.load(restore)
-        frame_y_pred = []
-        for X in datas:
-            X = np.transpose(X, (2, 0, 1))
-            X = X.reshape((1, 64, 64, 3))
-            y_ = model.predict(X)
-            frame_y_pred += y_.tolist()
-        np.save('tmeso.txt', np.array(frame_y_pred))
-    elif model_type == 'msi':
-        model = MesoInception4()
-        model.load(restore)
-        frame_y_pred = []
-        for X in datas:
-            X = np.transpose(X, (2, 0, 1))
-            X = X.reshape((1, 64, 64, 3))
-            y_ = model.predict(X)
-            frame_y_pred += y_.tolist()
-        np.save('tmsi.txt', np.array(frame_y_pred))
-    elif model_type == 'cap':
-        vgg_ext = model_big.VggExtractor()
-        capnet = model_big.CapsuleNet(2, 1)
-        capnet.load_state_dict(torch.load(os.path.join(restore)))
-        capnet.eval()
-        vgg_ext.cuda(1)
-        capnet.cuda(1)
-
-        tol_pred = np.array([], dtype=np.float)
-        tol_pred_prob = []
-        for img_data in datas:
-            img_data = torch.tensor(img_data, dtype=torch.float32)
-            img_data = img_data.view((1, 3, 64, 64))
-            input_v = img_data.cuda(1)
-
-            x = vgg_ext(input_v)
-            classes, class_ = capnet(x, random=False)
-
-            output_dis = class_.data.cpu()
-            output_pred = np.zeros((output_dis.shape[0]), dtype=np.float)
-
-            for i in range(output_dis.shape[0]):
-                if output_dis[i, 1] >= output_dis[i, 0]:
-                    output_pred[i] = 1.0
-                else:
-                    output_pred[i] = 0.0
-
-            tol_pred = np.concatenate((tol_pred, output_pred))
-            pred_prob = torch.softmax(output_dis, dim=1)
-            tol_pred_prob += pred_prob.cpu().numpy().tolist()
-            # tol_pred_prob = np.concatenate((tol_pred_prob, pred_prob.data.numpy()))
-        np.save('tcap.txt', np.array(tol_pred_prob))
-
 def video_frame_face_extractor(path, output):
-
+    import dlib
     face_detector = dlib.cnn_face_detection_model_v1('./mmod_human_face_detector.dat')
     video_fd = cv2.VideoCapture(path)
     if not video_fd.isOpened():
@@ -139,9 +29,9 @@ def video_frame_face_extractor(path, output):
     frame_index = 0
     success, frame = video_fd.read()
     while success:
-        frame_path = os.path.join(output+'/frame/%s_%d.jpg' % (path.split('/')[-1], frame_index))
+        frame_path = os.path.join(output + '/frame/%s_%d.jpg' % (path.split('/')[-1], frame_index))
         cv2.imwrite(frame_path, frame)
-        img_path = os.path.join(output+'/face/%s_%d.jpg' % (path.split('/')[-1], frame_index))
+        img_path = os.path.join(output + '/face/%s_%d.jpg' % (path.split('/')[-1], frame_index))
         height, width = frame.shape[:2]
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = face_detector(gray, 1)
@@ -219,11 +109,11 @@ def build_AUC_loss(outputs, labels, gamma, power_p):
     neg_predict = tf.gather(prdictions, neg_idx)
     neg_size = tf.shape(posi_predict)[0]
     posi_neg_diff = tf.reshape(
-                        -(tf.matmul(posi_predict, tf.ones([1,neg_size])) -
-                        tf.matmul(tf.ones([posi_size,1]), tf.reshape(neg_predict,[-1,neg_size]) ) - gamma),
-                        [-1,1])
-    posi_neg_diff = tf.where(tf.greater(posi_neg_diff,0),posi_neg_diff,tf.zeros([posi_size*neg_size,1]))
-    posi_neg_diff = tf.pow(posi_neg_diff,power_p)
+        -(tf.matmul(posi_predict, tf.ones([1, neg_size])) -
+          tf.matmul(tf.ones([posi_size, 1]), tf.reshape(neg_predict, [-1, neg_size])) - gamma),
+        [-1, 1])
+    posi_neg_diff = tf.where(tf.greater(posi_neg_diff, 0), posi_neg_diff, tf.zeros([posi_size * neg_size, 1]))
+    posi_neg_diff = tf.pow(posi_neg_diff, power_p)
     loss_approx_auc = tf.reduce_mean(posi_neg_diff)
     return loss_approx_auc
 
@@ -422,5 +312,3 @@ if __name__ == '__main__':
     read_npy('/Users/pu/Downloads/images/c40/1/tcap.txt.npy')
     read_npy('/Users/pu/Downloads/images/c40/1/tmsi.txt.npy')
     read_npy('/Users/pu/Downloads/images/c40/1/txcep.txt.npy')
-
-

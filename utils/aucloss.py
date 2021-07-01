@@ -20,5 +20,8 @@ class AUCLoss(torch.nn.Module):
         masked = diff[torch.where(diff < 0.0)]
         auc = torch.mean(torch.pow(-masked, self.p))
         bce = F.binary_cross_entropy_with_logits(y_pred, y_true)
-        loss = self.alpha * bce + (1 - self.alpha) * auc
+        if masked.shape[0] == 0:
+            loss = bce
+        else:
+            loss = self.alpha * bce + (1 - self.alpha) * auc
         return loss
