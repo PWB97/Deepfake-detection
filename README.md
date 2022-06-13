@@ -22,9 +22,9 @@ We provided our method, Xception<sup>6</sup>, FWA<sup>7</sup>, MesoNet<sup>8</su
 
 Except the model proposed in our paper, we also provided many variants of our model, including VIT, ResVIT and DCTNet<sup>10</sup> for replacement of ResNet, and CRNN for replacement of RNN.
 
-We also implemented Face X-ray for data-augumentation ( not used in our paper ), if you are interested in, go check `utils/dataloader.py`.
+We also implemented Face X-ray for data-augumentation (it is not used in this paper, but we found that it can increase the performance), if you are interested in, go check `utils/dataloader.py`.
 
-The implementation of AUC loss we proposed in our paper can be found in `utils/aucloss.py`.
+The implementation of AUC loss proposed in our paper can be found in `utils/aucloss.py`.
 
 Our checkpoint can be found [here](https://drive.google.com/file/d/144ol1u4Kz4HwOsG3qvEeVqH8bpqCvaOU/view?usp=sharing).
 
@@ -50,7 +50,7 @@ Our checkpoint can be found [here](https://drive.google.com/file/d/144ol1u4Kz4Hw
   python main.py -i input_path -r restore_from -g gpu_id
   ```
 
-- More parameters can be adjusted in `main.py`.
+- More parameters including the gamma of AUC loss can be found and adjusted in `main.py`.
 
 ## Training data preparation
 
