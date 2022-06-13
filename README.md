@@ -1,7 +1,11 @@
 # Learning a Deep Dual-level Network for Robust DeepFake Detection
 
+[![Python](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/)
 
-This repository is the official implementation of our paper "Learning a Deep Dual-level Network for Robust DeepFake Detection".
+Wenbo Pu, Jing Hu, Xin Wang, Yuezun Li, Shu Hu, Bin Zhu, Rui Song, Qi Song, Xi Wu, Siwei Lyu
+_________________
+
+This repository is the official implementation of our paper "Learning a Deep Dual-level Network for Robust DeepFake Detection", which has been accepted by **Pattern Recognition**. 
 
 ## Overview
 
@@ -55,6 +59,8 @@ We provided a script to generate training and test data for this repository. Use
 
 ## Citation
 
+Please kindly consider citing our paper in your publications.
+
 ```bib
 @article{PU2022108832,
   title = {Learning a deep dual-level network for robust DeepFake detection},
@@ -65,9 +71,10 @@ We provided a script to generate training and test data for this repository. Use
   issn = {0031-3203},
   doi = {https://doi.org/10.1016/j.patcog.2022.108832},
   url = {https://www.sciencedirect.com/science/article/pii/S0031320322003132},
-  author = {Wenbo Pu and Jing Hu and Xin Wang and Yuezun Li and Shu Hu and Bin Zhu and Rui Song and Qi Song and Xi Wu and Siwei Lyu},
+  author = {Wenbo Pu and Jing Hu and Xin Wang and Yuezun Li and Shu Hu and Bin Zhu and Rui Song and Qi Song and Xi Wu and Siwei Lyu}
 }
 ```
+_________________
 
 ## Notice
 
@@ -79,5 +86,5 @@ This repository is NOT for commecial use. It is provided "as it is" and we are n
 <sup>6</sup> [FaceForensics++ Learning to Detect Manipulated Facial Images](https://github.com/ondyari/FaceForensics) </br>
 <sup>7</sup> [Exposing DeepFake Videos By Detecting Face Warping Artifacts](https://github.com/yuezunli/CVPRW2019_Face_Artifacts) </br>
 <sup>8</sup> [MesoNet - a Compact Facial Video Forgery Detection Network](https://github.com/DariusAf/MesoNet) </br>
-<sup>9</sup> [USE OF A CAPSULE NETWORK TO DETECT FAKE IMAGES AND VIDEOS](https://github.com/raohashim/DFD) ( third-party implementation ) </br>
+<sup>9</sup> [USE OF A CAPSULE NETWORK TO DETECT FAKE IMAGES AND VIDEOS](https://github.com/raohashim/DFD) </br>
 <sup>10</sup> [Learning in the Frequency Domain](https://github.com/calmevtime/DCTNet)
