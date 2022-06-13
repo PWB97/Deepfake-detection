@@ -1,6 +1,8 @@
 # Learning a Deep Dual-level Network for Robust DeepFake Detection
 
 
+This repository is the official implementation of our paper "Learning a Deep Dual-level Network for Robust DeepFake Detection".
+
 ## Overview
 
 ![](./imgs/overview.png)
@@ -49,6 +51,23 @@ Our checkpoint can be found [here](https://drive.google.com/file/d/144ol1u4Kz4Hw
 ## Training data preparation
 
 We provided a script to generate training and test data for this repository. Use `make_train_test.py`. This script can preprocess FaceForensics++, Celeb-DF and DFDC datasets using [MTCNN](https://github.com/ipazc/mtcnn) or [Dlib](https://github.com/davisking/dlib/).
+
+
+## Citation
+
+```bib
+@article{PU2022108832,
+  title = {Learning a deep dual-level network for robust DeepFake detection},
+  journal = {Pattern Recognition},
+  volume = {130},
+  pages = {108832},
+  year = {2022},
+  issn = {0031-3203},
+  doi = {https://doi.org/10.1016/j.patcog.2022.108832},
+  url = {https://www.sciencedirect.com/science/article/pii/S0031320322003132},
+  author = {Wenbo Pu and Jing Hu and Xin Wang and Yuezun Li and Shu Hu and Bin Zhu and Rui Song and Qi Song and Xi Wu and Siwei Lyu},
+}
+```
 
 ## Notice
 
